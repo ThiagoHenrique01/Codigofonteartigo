@@ -42,10 +42,10 @@ camera = PiCamera()
 camera.rotation = 180
 
 #Configurar os pinos PWM para os motores em uma frequência
-motor1A_pwm = GPIO.PWM(motor1A, 3000)
-motor1B_pwm = GPIO.PWM(motor1B, 3000)
-motor2A_pwm = GPIO.PWM(motor2A, 3000)
-motor2B_pwm = GPIO.PWM(motor2B, 3000)
+motor1A_pwm = GPIO.PWM(motor1A, 2000)
+motor1B_pwm = GPIO.PWM(motor1B, 2000)
+motor2A_pwm = GPIO.PWM(motor2A, 2000)
+motor2B_pwm = GPIO.PWM(motor2B, 2000)
 
 #Iniciar os motores com 0% de duty cycle(parado)
 motor1A_pwm.start(0)
@@ -73,34 +73,54 @@ def continuar():
 	motor2A_pwm.ChangeDutyCycle(60)
 	motor2B_pwm.ChangeDutyCycle(0)
 	
+#Função para girar 90 graus à esquerda
+def girar_90_esquerda():
+	motor1A_pwm.ChangeDutyCycle(50)
+	motor1B_pwm.ChangeDutyCycle(0)
+	motor2A_pwm.ChangeDutyCycle(0)
+	motor2B_pwm.ChangeDutyCycle(60)
+	time.sleep(0.6)
+	motor1A_pwm.ChangeDutyCycle(0)
+	motor1B_pwm.ChangeDutyCycle(0)
+	motor2A_pwm.ChangeDutyCycle(0)
+	motor2B_pwm.ChangeDutyCycle(0)
+	
+#Função para girar 90 graus à direita
+def girar_90_direita():
+	motor1A_pwm.ChangeDutyCycle(0)
+	motor1B_pwm.ChangeDutyCycle(50)
+	motor2A_pwm.ChangeDutyCycle(60)
+	motor2B_pwm.ChangeDutyCycle(0)
+	time.sleep(0.6)
+	motor1A_pwm.ChangeDutyCycle(0)
+	motor1B_pwm.ChangeDutyCycle(0)
+	motor2A_pwm.ChangeDutyCycle(0)
+	motor2B_pwm.ChangeDutyCycle(0)
+	
 
 
 #Função para seguir a linha
 def seguir_linha():
-	while seguir_linha_ativo:
+	distancia = detectar_obstaculo()
+	time.sleep(0.01)
+	while seguir_linha_ativo and distancia >= 20:
 		if GPIO.input(sensor_esquerdo) == GPIO.LOW and GPIO.input(sensor_direito) == GPIO.HIGH:
-			# Sensor esquerdo encostando na linha
+			# Sensor direito encostando na linha
 			motor1A_pwm.ChangeDutyCycle(0)
 			motor1B_pwm.ChangeDutyCycle(70)
-			motor2A_pwm.ChangeDutyCycle(40)
+			motor2A_pwm.ChangeDutyCycle(50)
 			motor2B_pwm.ChangeDutyCycle(0)
 		elif GPIO.input(sensor_esquerdo) == GPIO.HIGH and GPIO.input(sensor_direito) == GPIO.LOW:
-			# Sensor direito encostando na linha
+			# Sensor esquerdo encostando na linha
 			motor1A_pwm.ChangeDutyCycle(40)
 			motor1B_pwm.ChangeDutyCycle(0)
 			motor2A_pwm.ChangeDutyCycle(0)
 			motor2B_pwm.ChangeDutyCycle(70)
 		elif GPIO.input(sensor_esquerdo) == GPIO.LOW and GPIO.input(sensor_direito) == GPIO.LOW:
 			# Ambos os sensores fora da linha (Em frente)
-			motor1A_pwm.ChangeDutyCycle(50)
+			motor1A_pwm.ChangeDutyCycle(34) ##direita
 			motor1B_pwm.ChangeDutyCycle(0)
-			motor2A_pwm.ChangeDutyCycle(50)
-			motor2B_pwm.ChangeDutyCycle(0)
-		elif GPIO.input(sensor_esquerdo) == GPIO.HIGH and GPIO.input(sensor_direito) == GPIO.HIGH:
-			# Ambos os sensores fora da linha (Em frente)
-			motor1A_pwm.ChangeDutyCycle(0)
-			motor1B_pwm.ChangeDutyCycle(0)
-			motor2A_pwm.ChangeDutyCycle(0)
+			motor2A_pwm.ChangeDutyCycle(40) ##esquerda
 			motor2B_pwm.ChangeDutyCycle(0)
 		else:
 			parar()
@@ -135,31 +155,7 @@ def acionar_buzzer():
 			buzzer_pwm.ChangeFrequency(i)
 			time.sleep(0.01)
 	buzzer_pwm.ChangeDutyCycle(0)
-		
 	
-#Função para girar 90 graus à direita
-def girar_90_direita():
-	motor1A_pwm.ChangeDutyCycle(50)
-	motor1B_pwm.ChangeDutyCycle(0)
-	motor2A_pwm.ChangeDutyCycle(0)
-	motor2B_pwm.ChangeDutyCycle(60)
-	time.sleep(0.5)
-	motor1A_pwm.ChangeDutyCycle(0)
-	motor1B_pwm.ChangeDutyCycle(0)
-	motor2A_pwm.ChangeDutyCycle(0)
-	motor2B_pwm.ChangeDutyCycle(0)
-	
-#Função para girar 90 graus à esquerda
-def girar_90_esquerda():
-	motor1A_pwm.ChangeDutyCycle(0)
-	motor1B_pwm.ChangeDutyCycle(50)
-	motor2A_pwm.ChangeDutyCycle(60)
-	motor2B_pwm.ChangeDutyCycle(0)
-	time.sleep(0.5)
-	motor1A_pwm.ChangeDutyCycle(0)
-	motor1B_pwm.ChangeDutyCycle(0)
-	motor2A_pwm.ChangeDutyCycle(0)
-	motor2B_pwm.ChangeDutyCycle(0)
 
 #Função para ler os QR codes
 def ler_qr_code():
@@ -187,92 +183,61 @@ try:
 		distancia = detectar_obstaculo()
 		if distancia < 20:
 			seguir_linha_ativo = False
+			time.sleep(0.1)
 			parar()
 			acionar_buzzer()
 		else:
 			seguir_linha_ativo = True
+			time.sleep(0.1)
 		# Seguir a linha
-		thread_seguir_linha = threading.Thread(target=seguir_linha)
-		thread_seguir_linha.start()
+			thread_seguir_linha = threading.Thread(target=seguir_linha)
+			thread_seguir_linha.start()
 
-		# Detectar obstáculo
-		distancia = detectar_obstaculo()
-		if distancia < 20:
-			seguir_linha_ativo = False
-			parar()
-			acionar_buzzer()
-		else:
-			seguir_linha_ativo = True
-			
 		# Ler QR code
 		qr_code = ler_qr_code()
 
 		
 		# Verificar ação a ser tomada com base no QR code lido
 		if qr_code == "Standby":
-			distancia = detectar_obstaculo()
-			if distancia >= 20:
-				seguir_linha_ativo = False
-				time.sleep(0.1)
-				parar()
-				GPIO.output(led_vermelho, GPIO.HIGH)
-				time.sleep(10)
-				GPIO.output(led_vermelho, GPIO.LOW)
-				seguir_linha_ativo = True
-				motor1A_pwm.ChangeDutyCycle(0)
-				motor1B_pwm.ChangeDutyCycle(50)
-				motor2A_pwm.ChangeDutyCycle(60)
-				motor2B_pwm.ChangeDutyCycle(0)
-				time.sleep(0.1)
-				motor1A_pwm.ChangeDutyCycle(0)
-				motor1B_pwm.ChangeDutyCycle(0)
-				motor2A_pwm.ChangeDutyCycle(0)
-				motor2B_pwm.ChangeDutyCycle(0)
-				continuar()
-				time.sleep(0.15)
-			else:
-				seguir_linha_ativo = False
-				parar()
-				acionar_buzzer()
+			seguir_linha_ativo = False
+			time.sleep(0.1)
+			GPIO.output(led_vermelho, GPIO.HIGH)
+			time.sleep(10)
+			GPIO.output(led_vermelho, GPIO.LOW)
+			motor1A_pwm.ChangeDutyCycle(0)
+			motor1B_pwm.ChangeDutyCycle(50)
+			motor2A_pwm.ChangeDutyCycle(60)
+			motor2B_pwm.ChangeDutyCycle(0)
+			time.sleep(0.1)
+			continuar()
+			time.sleep(0.15)
+			seguir_linha_ativo = True
+			time.sleep(0.1)
 		elif qr_code == "Carga":
-			distancia = detectar_obstaculo()
-			if distancia >= 20:
-				seguir_linha_ativo = False
-				time.sleep(0.1)
-				parar()
-				time.sleep(1)
-				GPIO.output(led_azul, GPIO.HIGH)
-				girar_90_direita()
-				time.sleep(5)
-				girar_90_esquerda()
-				GPIO.output(led_azul, GPIO.LOW)
-				seguir_linha_ativo = True
-				time.sleep(1)
-				continuar()
-				time.sleep(0.2)
-			else:
-				seguir_linha_ativo = False
-				parar()
-				acionar_buzzer()
-				
+			seguir_linha_ativo = False
+			time.sleep(0.1)
+			GPIO.output(led_azul, GPIO.HIGH)
+			time.sleep(0.1)
+			girar_90_esquerda()
+			time.sleep(5)
+			girar_90_direita()
+			time.sleep(0.1)
+			GPIO.output(led_azul, GPIO.LOW)
+			continuar()
+			time.sleep(0.2)
+			seguir_linha_ativo = True
+			time.sleep(0.1)
 		elif qr_code == "Descarga":
-			distancia = detectar_obstaculo()
-			if distancia >= 20:
-				seguir_linha_ativo = False
-				time.sleep(0.1)
-				parar()
-				GPIO.output(led_verde, GPIO.HIGH)
-				time.sleep(5)
-				GPIO.output(led_verde, GPIO.LOW)
-				seguir_linha_ativo = True
-				continuar()
-				time.sleep(0.2)
-			else:
-				seguir_linha_ativo = False
-				parar()
-				acionar_buzzer()
+			seguir_linha_ativo = False
+			time.sleep(0.1)
+			GPIO.output(led_verde, GPIO.HIGH)
+			time.sleep(5)
+			GPIO.output(led_verde, GPIO.LOW)
+			continuar()
+			time.sleep(0.2)
+			seguir_linha_ativo = True
+			time.sleep(0.1)
 
 
 except KeyboardInterrupt:
 	GPIO.cleanup()
-			
